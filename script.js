@@ -69,3 +69,38 @@ function createDrop() {
     drop.remove(); // Clean up drops that weren't caught
   });
 }
+
+// Confetti celebration overlay
+function showConfetti() {
+    if (document.getElementById('confetti-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'confetti-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = 0;
+    overlay.style.left = 0;
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.fontSize = '5rem';
+    overlay.style.zIndex = 1000;
+    overlay.style.pointerEvents = 'none';
+    overlay.innerText = '🎉🎊🎉';
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.remove();
+    }, 2000);
+}
+
+// Patch score update logic to trigger confetti at 25
+const scoreSpan = document.getElementById('score');
+let lastScore = 0;
+const observer = new MutationObserver(() => {
+    const score = parseInt(scoreSpan.textContent, 10);
+    if (score === 25 && lastScore < 25) {
+        showConfetti();
+    }
+    lastScore = score;
+});
+observer.observe(scoreSpan, { childList: true });
