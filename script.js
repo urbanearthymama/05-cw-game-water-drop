@@ -5,18 +5,76 @@ let timerInterval; // Timer interval variable
 let timeLeft = 30; // Countdown time in seconds
 let score = 0; // Track the player's score
 
+// Difficulty settings
+const DIFFICULTY_SETTINGS = {
+    easy:   { time: 40, dropInterval: 1200, dropSpeed: 5, winScore: 15 },
+    normal: { time: 30, dropInterval: 1000, dropSpeed: 4, winScore: 25 },
+    hard:   { time: 20, dropInterval: 700,  dropSpeed: 2.7, winScore: 35 }
+};
+
+let currentDifficulty = 'normal';
+
+// Sound effects
+const collectSound = new Audio('sounds/collect.mp3');
+const missSound = new Audio('sounds/miss.mp3');
+const buttonSound = new Audio('sounds/button.mp3');
+const winSound = new Audio('sounds/win.mp3');
+
+// Utility to play a sound from start
+function playSound(sound) {
+    if (!sound) return;
+    sound.currentTime = 0;
+    sound.play();
+}
+
 // Wait for button click to start the game
-document.getElementById("start-btn").addEventListener("click", startGame);
+document.getElementById("start-btn").addEventListener("click", () => {
+    playSound(buttonSound);
+    startGame();
+});
+
+// Listen for difficulty changes
+const difficultySelect = document.getElementById('difficulty');
+difficultySelect.addEventListener('change', (e) => {
+    currentDifficulty = e.target.value;
+    // Optionally, reset game state/UI here if needed
+});
+
+// Listen for restart button
+document.getElementById("restart-btn").addEventListener("click", () => {
+    playSound(buttonSound);
+    restartGame();
+});
+
+function restartGame() {
+    // Stop any running game
+    clearInterval(timerInterval);
+    clearInterval(dropMaker);
+    // Remove all drops
+    document.querySelectorAll('.water-drop').forEach(drop => drop.remove());
+    // Reset UI and state
+    gameRunning = false;
+    startGame();
+}
 
 function startGame() {
   // Prevent multiple games from running at once
   if (gameRunning) return;
 
+  // Get difficulty settings
+  const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+
   gameRunning = true;
-  timeLeft = 30; // Reset timer to 30 seconds
+  timeLeft = settings.time; // Set timer based on difficulty
   score = 0; // Reset score
   document.getElementById("time").textContent = timeLeft;
   document.getElementById("score").textContent = score;
+
+  // Remove any leftover drops
+  document.querySelectorAll('.water-drop').forEach(drop => drop.remove());
+
+  // Reset milestones on new game
+  shownMilestones = new Set();
 
   // Start countdown timer
   timerInterval = setInterval(() => {
@@ -30,11 +88,83 @@ function startGame() {
     }
   }, 1000);
 
-  // Create new drops every second (1000 milliseconds)
-  dropMaker = setInterval(createDrop, 1000);
+  // Create new drops at the interval for this difficulty
+  dropMaker = setInterval(() => createDrop(settings.dropSpeed), settings.dropInterval);
 }
 
-function createDrop() {
+// Milestone messages: {score, message}
+const MILESTONES = [
+    { score: 5, message: "Great start!" },
+    { score: 10, message: "Halfway there!" },
+    { score: 15, message: "Keep going!" },
+    { score: 20, message: "Almost at the goal!" },
+    { score: 25, message: "You did it!" }
+];
+
+// Track which milestones have been shown
+let shownMilestones = new Set();
+
+// Show milestone message overlay
+function showMilestoneMessage(msg) {
+    if (document.getElementById('milestone-message')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'milestone-message';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '20%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, 0)';
+    overlay.style.background = '#FFC907';
+    overlay.style.color = '#222';
+    overlay.style.padding = '18px 36px';
+    overlay.style.borderRadius = '12px';
+    overlay.style.fontSize = '2rem';
+    overlay.style.fontFamily = "'Proxima Nova', 'Avenir', Arial, Helvetica, sans-serif, Georgia";
+    overlay.style.boxShadow = '0 4px 24px rgba(0,0,0,0.15)';
+    overlay.style.zIndex = 2000;
+    overlay.style.pointerEvents = 'none';
+    overlay.textContent = msg;
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.remove();
+    }, 1400);
+}
+
+function startGame() {
+  // Prevent multiple games from running at once
+  if (gameRunning) return;
+
+  // Get difficulty settings
+  const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+
+  gameRunning = true;
+  timeLeft = settings.time; // Set timer based on difficulty
+  score = 0; // Reset score
+  document.getElementById("time").textContent = timeLeft;
+  document.getElementById("score").textContent = score;
+
+  // Remove any leftover drops
+  document.querySelectorAll('.water-drop').forEach(drop => drop.remove());
+
+  // Reset milestones on new game
+  shownMilestones = new Set();
+
+  // Start countdown timer
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById("time").textContent = timeLeft;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      clearInterval(dropMaker);
+      gameRunning = false;
+      // Optionally, show game over or reset UI here
+    }
+  }, 1000);
+
+  // Create new drops at the interval for this difficulty
+  dropMaker = setInterval(() => createDrop(settings.dropSpeed), settings.dropInterval);
+}
+
+function createDrop(dropSpeed = 4) {
   // Create a new div element that will be our water drop
   const drop = document.createElement("div");
   drop.className = "water-drop";
@@ -51,8 +181,8 @@ function createDrop() {
   const xPosition = Math.random() * (gameWidth - 60);
   drop.style.left = xPosition + "px";
 
-  // Make drops fall for 4 seconds
-  drop.style.animationDuration = "4s";
+  // Make drops fall for dropSpeed seconds
+  drop.style.animationDuration = `${dropSpeed}s`;
 
   // Add the new drop to the game screen
   document.getElementById("game-container").appendChild(drop);
@@ -61,17 +191,27 @@ function createDrop() {
   drop.addEventListener("click", () => {
     score++;
     document.getElementById("score").textContent = score;
-    drop.remove();
+    playSound(collectSound);
+    // Milestone check
+    for (const milestone of MILESTONES) {
+        if (score === milestone.score && !shownMilestones.has(milestone.score)) {
+            showMilestoneMessage(milestone.message);
+            shownMilestones.add(milestone.score);
+        }
+    }
+    drop.remove(); // This removes the drop when clicked
   });
 
   // Remove drops that reach the bottom (weren't clicked)
   drop.addEventListener("animationend", () => {
+    playSound(missSound);
     drop.remove(); // Clean up drops that weren't caught
   });
 }
 
 // Confetti celebration overlay
 function showConfetti() {
+    playSound(winSound);
     if (document.getElementById('confetti-overlay')) return;
     const overlay = document.createElement('div');
     overlay.id = 'confetti-overlay';
@@ -93,12 +233,13 @@ function showConfetti() {
     }, 2000);
 }
 
-// Patch score update logic to trigger confetti at 25
+// Patch score update logic to trigger confetti at winScore for current difficulty
 const scoreSpan = document.getElementById('score');
 let lastScore = 0;
 const observer = new MutationObserver(() => {
     const score = parseInt(scoreSpan.textContent, 10);
-    if (score === 25 && lastScore < 25) {
+    const winScore = DIFFICULTY_SETTINGS[currentDifficulty].winScore;
+    if (score === winScore && lastScore < winScore) {
         showConfetti();
     }
     lastScore = score;

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Water Drop Game</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Font stack set in CSS, no web font import needed -->
 </head>
 <body>
     <section class="hero-section">
@@ -16,6 +17,13 @@
         <h1 class="game-title">Water Drop</h1>
         <p class="game-tagline">Catch the good drops, avoid the bad ones!</p>
         <div class="score-panel">
+            <!-- Difficulty selector added here -->
+            <label for="difficulty" style="font-size:16px;margin-right:8px;">Difficulty:</label>
+            <select id="difficulty" style="font-size:16px;">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+            </select>
             <div class="score">Score: <span id="score">0</span></div>
             <div class="timer">Time: <span id="time">30</span>s</div>
             <button id="start-btn">Start Game</button>
@@ -27,5 +35,16 @@
     </div>
   
     <script src="script.js"></script>
+    <footer class="footer">
+        <div>
+            <a href="https://www.charitywater.org/" target="_blank" rel="noopener" class="footer-link">
+                Visit charity: water
+            </a>
+            &nbsp;|&nbsp;
+            <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener" class="footer-link">
+                Donate Now
+            </a>
+        </div>
+    </footer>
 </body>
 </html>
